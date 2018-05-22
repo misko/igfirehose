@@ -8,6 +8,10 @@ from scrapy.exceptions import CloseSpider
 
 from scrapy_instagram.items import Post
 
+
+import redis
+
+
 class InstagramSpider(scrapy.Spider):
     name = "hashtag"  # Name of the Spider, required value
     custom_settings = {
@@ -19,20 +23,23 @@ class InstagramSpider(scrapy.Spider):
     #     self.logger.info('Total Elements %s', response.url)
 
     def __init__(self, hashtag=''):
+        self.r = redis.Redis(
+            host='127.0.0.1')
         self.hashtag = hashtag
         if hashtag == '':
             self.hashtag = input("Name of the hashtag? ")
-        self.start_urls = ["https://www.instagram.com/explore/tags/"+self.hashtag+"/?__a=1"]
+        resume=self.r.get("resume_"+self.hashtag)
+        if resume:
+            self.start_urls = [resume]
+        else:
+            self.start_urls = ["https://www.instagram.com/explore/tags/"+self.hashtag+"/?__a=1"]
+        self.r.set("resume_"+self.hashtag, self.start_urls[-1])
+
         self.date = time.strftime("%d-%m-%Y_%H")
         self.checkpoint_path = './scraped/%s/%s/.checkpoint' % (self.name, self.hashtag)
-        self.readCheackpoint()
-
-    def readCheackpoint(self):
-        filename = self.checkpoint_path
-        if not os.path.exists(filename):
-            self.last_crawled = ''
-            return
-        self.last_crawled = open(filename).readline().rstrip()
+        self.count=0
+        self.punt=0
+        self.start=int(time.time())
 
     # Entry point for the spider
     def parse(self, response):
@@ -40,32 +47,44 @@ class InstagramSpider(scrapy.Spider):
 
     # Method for parsing a hastag
     def parse_htag(self, response):
- 
+        print "AGENT",response.request.headers['User-Agent'] 
         #Load it as a json object
         graphql = json.loads(response.text)
         has_next = graphql['graphql']['hashtag']['edge_hashtag_to_media']['page_info']['has_next_page']
         edges = graphql['graphql']['hashtag']['edge_hashtag_to_media']['edges']
 
-        if not hasattr(self, 'starting_shorcode') and len(edges):
-            self.starting_shorcode = edges[0]['node']['shortcode']
-            filename = self.checkpoint_path
-            f = open(filename, 'w')
-            f.write(self.starting_shorcode)
+        #if not hasattr(self, 'starting_shorcode') and len(edges):
+        #    self.starting_shorcode = edges[0]['node']['shortcode']
+        #    filename = self.checkpoint_path
+        #    f = open(filename, 'w')
+        #    f.write(self.starting_shorcode)
 
         for edge in edges:
             node = edge['node']
-            shortcode = node['shortcode']
-            if(self.checkAlreadyScraped(shortcode)):
-                return
-            yield scrapy.Request("https://www.instagram.com/p/"+shortcode+"/?__a=1", callback=self.parse_post)
+            if self.r.sismember('shortcodes',node['shortcode'])==0:
+                self.count+=1
+            else:
+                self.punt+=1
+            self.r.set(node['shortcode'], str(edge))
+            self.r.sadd('shortcodes',node['shortcode'])
+            self.r.sadd('shortcodes_'+self.hashtag,node['shortcode'])
+            #print edge
+            #print "XXX",edge
+            #shortcode = node['shortcode']
+            #if(self.checkAlreadyScraped(shortcode)):
+            #    return
+            #yield scrapy.Request("https://www.instagram.com/p/"+shortcode+"/?__a=1", callback=self.parse_post)
+        now=int(time.time())
+        sz=self.r.scard('shortcodes_'+self.hashtag)
+        print "SPEED",self.count/float(now-self.start),"NEW",self.count,"PUNT",self.punt,"TOTAL",sz
 
         if has_next:
             end_cursor = graphql['graphql']['hashtag']['edge_hashtag_to_media']['page_info']['end_cursor']
+            self.r.set("resume_"+self.hashtag, "https://www.instagram.com/explore/tags/"+self.hashtag+"/?__a=1&max_id="+end_cursor)
+            #hits_per_hour=200.0
+            #seconds_per_hit=(60.0*60.0)/hits_per_hour
+            #time.sleep(seconds_per_hit)
             yield scrapy.Request("https://www.instagram.com/explore/tags/"+self.hashtag+"/?__a=1&max_id="+end_cursor, callback=self.parse_htag)
-
-
-    def checkAlreadyScraped(self,shortcode):
-        return self.last_crawled == shortcode
            
     def parse_post(self, response):
         graphql = json.loads(response.text)
