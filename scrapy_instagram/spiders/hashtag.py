@@ -22,9 +22,9 @@ class InstagramSpider(scrapy.Spider):
     # def closed(self, reason):
     #     self.logger.info('Total Elements %s', response.url)
 
-    def __init__(self, hashtag=''):
+    def __init__(self, hashtag='',redis_host='',redis_password=''):
         self.r = redis.Redis(
-            host='127.0.0.1')
+            host=redis_host,password=redis_password)
         self.hashtag = hashtag
         if hashtag == '':
             self.hashtag = input("Name of the hashtag? ")
