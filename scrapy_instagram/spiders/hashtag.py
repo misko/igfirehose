@@ -5,10 +5,10 @@ import time
 import os.path
 import json
 from scrapy.exceptions import CloseSpider
-
+import schedule
 from scrapy_instagram.items import Post
 
-
+import sys
 import redis
 
 
@@ -18,19 +18,51 @@ class InstagramSpider(scrapy.Spider):
         'FEED_URI': './scraped/%(name)s/%(hashtag)s/%(date)s',
     }
     checkpoint_path = './scraped/%(name)s/%(hashtag)s/.checkpoint'
-    handle_httpstatus_list = [404]
+    handle_httpstatus_list = [404,429]
 
-    # def closed(self, reason):
-    #     self.logger.info('Total Elements %s', response.url)
+#    @classmethod
+#    def from_crawler(cls, crawler, *args, **kwargs):
+#        spider = super(InstagramSpider, cls).from_crawler(crawler, *args, **kwargs)
+#        #crawler.signals.connect(spider.spider_opened, signals.spider_opened)
+#        crawler.signals.connect(spider.spider_closed, signals.spider_closed)
+#        return spider
+#
+#    def closed(self, reason):
+#        self.logger.info('Total Elements %s', response.url)
+#        print "CLOSING!",self.r
+#        print "CLOSING!",self.r
+#        print "CLOSING!",self.r
+#        print "CLOSING!",self.r
+#        print "CLOSING!",self.r
+#        print "CLOSING!",self.r
+#        print "CLOSING!",self.r
+#        print "CLOSING!",self.r
+#
+#    def spider_closed(self, spider):
+#        # second param is instance of spder about to be closed.
+#        print "CLOSING!",self.r
+#        print "CLOSING!",self.r
+#        print "CLOSING!",self.r
+#        print "CLOSING!",self.r
+#        print "CLOSING!",self.r
+#        print "CLOSING!",self.r
+#        print "CLOSING!",self.r
 
     def __init__(self, hashtag='',redis_host='',redis_password='',redis_port=0):
-        redis_port=int(redis_port)
-        print redis_host,redis_password,"XX"
+        self.redis_port=int(redis_port)
+        self.redis_host=redis_host
+        self.redis_password=redis_password
+        self.hashtag=hashtag
+        self.reset()
+
+    def reset(self):
         self.r = redis.Redis(
-            host=redis_host,password=redis_password,port=redis_port)
-        self.hashtag = hashtag
-        if hashtag == '':
-            self.hashtag = input("Name of the hashtag? ")
+            host=self.redis_host,password=self.redis_password,port=self.redis_port)
+        if self.hashtag == '':
+            self.hashtag,self.rid=schedule.get_tag_auto(self.r,60)
+            if self.hashtag==None:
+                print "FAIL: Failed to get a hastag to mine"
+                raise CloseSpider('FAIL: Failed to get a hastag to mine')
         resume=self.r.get("resume_"+self.hashtag)
         if resume:
             self.start_urls = [resume]
@@ -38,21 +70,24 @@ class InstagramSpider(scrapy.Spider):
             self.start_urls = ["https://www.instagram.com/explore/tags/"+self.hashtag+"/?__a=1"]
         self.r.set("resume_"+self.hashtag, self.start_urls[-1])
 
-        self.date = time.strftime("%d-%m-%Y_%H")
-        self.checkpoint_path = './scraped/%s/%s/.checkpoint' % (self.name, self.hashtag)
         self.count=0
         self.punt=0
         self.start=int(time.time())
+
 
     # Entry point for the spider
     def parse(self, response):
         if response.status == 404:
             #got 404 , reset tag?
             print "404,reset tag?"
+        if response.status == 429:
+            print "GOT 429, waitign 60s"
+            time.sleep(60)
         return self.parse_htag(response)
 
     # Method for parsing a hastag
     def parse_htag(self, response):
+        print self.r.ttl('mining_'+self.hashtag)
         print "AGENT",response.request.headers['User-Agent'] 
         #Load it as a json object
         graphql = json.loads(response.text)
@@ -90,6 +125,8 @@ class InstagramSpider(scrapy.Spider):
             #hits_per_hour=200.0
             #seconds_per_hit=(60.0*60.0)/hits_per_hour
             #time.sleep(seconds_per_hit)
+            if self.r.ttl('mining_'+self.hashtag)<180:
+                schedule.refresh_auto_tag(self.r,self.hashtag,self.rid,1200)
             yield scrapy.Request("https://www.instagram.com/explore/tags/"+self.hashtag+"/?__a=1&max_id="+end_cursor, callback=self.parse_htag)
            
     def parse_post(self, response):
