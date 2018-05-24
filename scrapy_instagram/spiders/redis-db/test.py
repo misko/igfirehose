@@ -5,6 +5,6 @@ r = redis.Redis(
 #    port=port, 
 #    password='password')
 #r.set('foo', 'bar')
-print r.get('foo0')
+#print r.get('foo0')
 value = r.smembers('shortcodes')
-#print(value)
+print(value)

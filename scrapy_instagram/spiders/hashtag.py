@@ -3,7 +3,7 @@ import scrapy
 import json
 import time
 import os.path
-
+import json
 from scrapy.exceptions import CloseSpider
 
 from scrapy_instagram.items import Post
@@ -18,6 +18,7 @@ class InstagramSpider(scrapy.Spider):
         'FEED_URI': './scraped/%(name)s/%(hashtag)s/%(date)s',
     }
     checkpoint_path = './scraped/%(name)s/%(hashtag)s/.checkpoint'
+    handle_httpstatus_list = [404]
 
     # def closed(self, reason):
     #     self.logger.info('Total Elements %s', response.url)
@@ -45,6 +46,9 @@ class InstagramSpider(scrapy.Spider):
 
     # Entry point for the spider
     def parse(self, response):
+        if response.status == 404:
+            #got 404 , reset tag?
+            print "404,reset tag?"
         return self.parse_htag(response)
 
     # Method for parsing a hastag
@@ -68,7 +72,7 @@ class InstagramSpider(scrapy.Spider):
             else:
                 self.punt+=1
             self.r.set(node['shortcode'], str(edge))
-            self.r.sadd('shortcodes',node['shortcode'])
+            self.r.sadd('shortcodes',json.dumps(node['shortcode']))
             self.r.sadd('shortcodes_'+self.hashtag,node['shortcode'])
             #print edge
             #print "XXX",edge
