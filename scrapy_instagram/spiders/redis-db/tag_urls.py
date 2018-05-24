@@ -17,16 +17,41 @@ r = redis.Redis(
     port=port, 
     password=password)
 
+def get_hashtags(s):
+    h=[]
+    for x in s.split():
+        if x[0]=='#' and len(x)>1:
+            h.append(x)
+    return h
+
+hashtag_counts={}
+
 #shortcodes=r.smembers("shortcodes_"+tag)
 shortcodes=r.srandmember("shortcodes_"+tag,-n)
 for shortcode in shortcodes:
     edge = r.get(shortcode)
-    print edge
-    print ""
-    edge=edge.replace("'",'+|X').replace('"',"'").replace('+|X','"')
-    print edge
-    edge=edge.replace('{u"','{"').replace(' u"',' "').replace('False','0').replace('True','1')
-    print edge
-    #print eval(edge.replace("'","\\'").replace('\n',''))
-    parsed_json = json.loads(edge.replace("'",'"'))
-    print parsed_json
+    edge = json.loads(edge) 
+    #print edge['node']['display_url']
+    #print edge
+    caption = ""
+    if len(edge['node']['edge_media_to_caption']['edges'])>0:
+        caption=edge['node']['edge_media_to_caption']['edges'][0]['node']['text']
+    hashtags = get_hashtags(caption)
+    #print "HASH",hashtags
+    for hashtag in hashtags:
+        if hashtag not in hashtag_counts:
+            hashtag_counts[hashtag]=0
+        hashtag_counts[hashtag]+=1
+    #print "*"*80
+
+
+hashtags=[]
+for k in hashtag_counts:
+    frac=float(hashtag_counts[k])/n
+    if frac>0.01:
+        hashtags.append((frac,k))
+hashtags.sort(reverse=True)
+#print hashtags
+for f,hashtag in hashtags:
+    for x in range(int(100*f)):
+        print hashtag
