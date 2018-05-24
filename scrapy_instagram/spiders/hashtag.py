@@ -72,8 +72,8 @@ class InstagramSpider(scrapy.Spider):
             else:
                 self.punt+=1
             self.r.set(node['shortcode'], str(edge))
-            self.r.sadd('shortcodes',json.dumps(node['shortcode']))
-            self.r.sadd('shortcodes_'+self.hashtag,node['shortcode'])
+            self.r.sadd('shortcodes',node['shortcode'])
+            self.r.sadd('shortcodes_'+self.hashtag,json.dumps(node['shortcode']))
             #print edge
             #print "XXX",edge
             #shortcode = node['shortcode']
