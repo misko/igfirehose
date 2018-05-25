@@ -1,0 +1,17 @@
+tag = IG hashtag 
+
+resume_{tag} = last page scraped
+
+shortcodes_{tag} = shortcodes for this tag
+shortcodes = all shortcodes scraped
+
+mining_{tag} = random id of miner for this tag
+
+{shortcode} = json dumps of IG edge
+
+tags = set of tags 
+
+#operations that need to be supported
+fetch(tag,n) - get a list of hashtags/likes/display_urls for random n set from tag
+stats(tag) - get stats for tag
+
