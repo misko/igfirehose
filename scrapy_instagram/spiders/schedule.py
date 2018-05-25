@@ -8,28 +8,29 @@ def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
 def get_tag_auto(r,seconds):
-    tag=r.srandmember('tags',-1)
-    if tag:
-        tag=tag[0]
-        mining_tag='mining_'+tag
-        current_value=r.get(mining_tag)
-        if current_value==None:
-            pipe=r.pipeline(True)
-            pipe.watch(mining_tag)
+    for x in xrange(6):
+        tag=r.srandmember('tags',-1)
+        if tag:
+            tag=tag[0]
+            mining_tag='mining_'+tag
             current_value=r.get(mining_tag)
-            rid=id_generator()
-            if current_value!=None:
-                pipe.unwatch()
-            else:
-                try:
-                    pipe.multi()
-                    pipe.set(mining_tag,rid)
-                    pipe.expire(mining_tag,seconds)
-                    if pipe.execute():
-                        return tag,rid
-                except redis.exceptions.WatchError:
-                    pass
-    print "Failed to get an auto tag! Sleep then try!"
+            if current_value==None:
+                pipe=r.pipeline(True)
+                pipe.watch(mining_tag)
+                current_value=r.get(mining_tag)
+                rid=id_generator()
+                if current_value!=None:
+                    pipe.unwatch()
+                else:
+                    try:
+                        pipe.multi()
+                        pipe.set(mining_tag,rid)
+                        pipe.expire(mining_tag,seconds)
+                        if pipe.execute():
+                            return tag,rid
+                    except redis.exceptions.WatchError:
+                        pass
+        print "Failed to get an auto tag! Sleep then try!"
     return None,None
 
 def refresh_auto_tag(r,tag,rid,seconds):
