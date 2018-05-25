@@ -54,12 +54,14 @@ class InstagramSpider(scrapy.Spider):
         self.redis_password=redis_password
         self.hashtag=hashtag
         self.reset()
+        self.auto_tag=False
 
     def reset(self):
         self.r = redis.Redis(
             host=self.redis_host,password=self.redis_password,port=self.redis_port)
         if self.hashtag == '':
             self.hashtag,self.rid=schedule.get_tag_auto(self.r,60)
+            self.auto_tag=True
             if self.hashtag==None:
                 print "FAIL: Failed to get a hastag to mine"
                 raise CloseSpider('FAIL: Failed to get a hastag to mine')
@@ -125,7 +127,7 @@ class InstagramSpider(scrapy.Spider):
             #hits_per_hour=200.0
             #seconds_per_hit=(60.0*60.0)/hits_per_hour
             #time.sleep(seconds_per_hit)
-            if self.r.ttl('mining_'+self.hashtag)<180:
+            if self.auto_tag and self.r.ttl('mining_'+self.hashtag)<180:
                 schedule.refresh_auto_tag(self.r,self.hashtag,self.rid,1200)
             yield scrapy.Request("https://www.instagram.com/explore/tags/"+self.hashtag+"/?__a=1&max_id="+end_cursor, callback=self.parse_htag)
            
