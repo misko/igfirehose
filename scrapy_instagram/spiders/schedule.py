@@ -53,6 +53,10 @@ def refresh_auto_tag(r,tag,rid,seconds):
                 pass
     return False
 
+
+def rm_auto_tag(r,tag):
+    r.delete('mining_'+tag)
+
 if __name__=='__main__':
     if len(sys.argv)!=4:
         print "% ip port password"

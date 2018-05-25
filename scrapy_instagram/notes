@@ -1,2 +1,9 @@
 #pip install scrapy-fake-useragent
 pip install scrapy-useragents
+
+#wget -O - http://dogtime.com/dog-breeds/profiles | egrep -o 'alt="[A-Za-z]*"' raw | sed 's/alt//g' | sed 's/[=]*["]*//g' | tr '[:upper:]' '[:lower:]' > breeds
+wget -O - http://dogtime.com/dog-breeds/profiles | egrep -o 'alt="[A-Za-z ]*"' | sed 's/alt//g' | sed 's/[=]*["]*//g' | tr '[:upper:]' '[:lower:]' | sed 's/ //g'  > breeds
+wget -O - https://en.wikipedia.org/wiki/List_of_cat_breeds  | egrep -o 'title="[A-Za-z ]* cat">' | sed 's/title="\(.*\)">/\1/g' | tr "[:upper:]" "[:lower:]" | sed 's/ //g' > cat_breeds
+wget -O - https://en.wikipedia.org/wiki/List_of_cat_breeds | egrep -o 'title="[A-Za-z ]* cat">[A-Za-z ]*<' | sed 's@.*>\(.*\)<@\1@g' | tr '[:upper:]' '[:lower:]' | sed 's/ //g' | sed 's/cat$//g' | sed 's/$/cat/g' >> cat_breeds 
+cat cat_breeds | sort | uniq > cat_tmp
+mv cat_tmp cat_breeds
