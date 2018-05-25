@@ -82,7 +82,7 @@ class InstagramSpider(scrapy.Spider):
             print "404,reset tag?"
         if response.status == 429:
             print "GOT 429, waitign 60s"
-            time.sleep(60)
+            raise CloseSpider('FAIL: All out of love, and so lost without you')
         return self.parse_htag(response)
 
     # Method for parsing a hastag
