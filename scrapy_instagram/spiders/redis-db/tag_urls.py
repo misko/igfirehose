@@ -48,7 +48,7 @@ for shortcode in shortcodes:
 hashtags=[]
 for k in hashtag_counts:
     frac=float(hashtag_counts[k])/n
-    if frac>0.01:
+    if frac>0.001 and hashtag_counts[k]>2:
         hashtags.append((frac,k))
 hashtags.sort(reverse=True)
 #print hashtags
