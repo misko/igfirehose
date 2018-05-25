@@ -1,2 +1,2 @@
 sudo apt install -y python-pip
-sudo pip install Flask
+sudo pip install Flask redis
