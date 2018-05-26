@@ -7,10 +7,53 @@ import json
 from scrapy.exceptions import CloseSpider
 import schedule
 from scrapy_instagram.items import Post
-
+import zlib
 import sys
 import redis
 
+
+lookup={
+	'version':0,
+	'hashtags':1,
+	'url':2,
+	'likes':3,
+	'owner':4,
+	'timestamp':5,
+	'thumbnails':6,
+	'shortcode':7
+	}
+
+def string_to_hashtags(s):
+	h=[]
+	for x in s.split():
+	    if x[0]=='#' and len(x)>1:
+		h.append(x.lower())
+	return h
+def trim(edge):
+	new_edge={}
+	if 'node' in edge:
+		new_edge['caption']=""
+		if len(edge['node']['edge_media_to_caption']['edges'])>0:
+			new_edge['caption']=edge['node']['edge_media_to_caption']['edges'][0]['node']['text']
+		new_edge['hashtags'] = string_to_hashtags(new_edge['caption'])
+		new_edge['url'] = edge['node']['display_url']
+		new_edge['likes'] = edge['node']['edge_liked_by']['count']
+		new_edge['owner'] = edge['node']['owner']['id']
+		new_edge['timestamp'] = int(edge['node']['taken_at_timestamp'])
+		new_edge['thumbnails'] = edge['node']['thumbnail_resources'][:2]
+		new_edge['shortcode'] = edge['node']['shortcode']
+	else:
+		new_edge=edge
+	if 'version' not in new_edge:
+		new_edge['version']=1
+		thumbs=[]
+		for idx in xrange(len(new_edge['thumbnails'])):
+			thumbs.append(new_edge['thumbnails'][idx]['src'])
+		new_edge['thumbnails']=thumbs
+	edge_list=[None]*len(lookup)
+	for field in lookup:
+		edge_list[lookup[field]]=new_edge[field]
+	return edge_list
 
 class InstagramSpider(scrapy.Spider):
     name = "hashtag"  # Name of the Spider, required value
@@ -20,33 +63,6 @@ class InstagramSpider(scrapy.Spider):
     checkpoint_path = './scraped/%(name)s/%(hashtag)s/.checkpoint'
     handle_httpstatus_list = [404,429]
 
-#    @classmethod
-#    def from_crawler(cls, crawler, *args, **kwargs):
-#        spider = super(InstagramSpider, cls).from_crawler(crawler, *args, **kwargs)
-#        #crawler.signals.connect(spider.spider_opened, signals.spider_opened)
-#        crawler.signals.connect(spider.spider_closed, signals.spider_closed)
-#        return spider
-#
-#    def closed(self, reason):
-#        self.logger.info('Total Elements %s', response.url)
-#        print "CLOSING!",self.r
-#        print "CLOSING!",self.r
-#        print "CLOSING!",self.r
-#        print "CLOSING!",self.r
-#        print "CLOSING!",self.r
-#        print "CLOSING!",self.r
-#        print "CLOSING!",self.r
-#        print "CLOSING!",self.r
-#
-#    def spider_closed(self, spider):
-#        # second param is instance of spder about to be closed.
-#        print "CLOSING!",self.r
-#        print "CLOSING!",self.r
-#        print "CLOSING!",self.r
-#        print "CLOSING!",self.r
-#        print "CLOSING!",self.r
-#        print "CLOSING!",self.r
-#        print "CLOSING!",self.r
     def read_config(self):
         f=open(self.config_fn)
         for line in f:
@@ -70,6 +86,7 @@ class InstagramSpider(scrapy.Spider):
         self.hashtag=hashtag
         self.reset()
         self.auto_tag=False
+	self.rid=None
 
     def reset(self):
 	self.redis_connect()
@@ -101,7 +118,8 @@ class InstagramSpider(scrapy.Spider):
             #got 404 , reset tag?
             print "404,reset tag?"
         if response.status == 429:
-            schedule.rm_auto_tag(self.r,self.hashtag)
+	    if self.rid!=None: 
+            	schedule.rm_auto_tag(self.r,self.hashtag)
 	    time.sleep(20)
             raise CloseSpider('FAIL: All out of love, and so lost without you')
         print self.r.ttl('mining_'+self.hashtag)
@@ -128,7 +146,9 @@ class InstagramSpider(scrapy.Spider):
                 self.count+=1
             else:
                 self.punt+=1
-            self.r.set(node['shortcode'], json.dumps(edge))
+	    trimmed_edge=trim(edge)
+            compressed_edge=zlib.compress(json.dumps(trimmed_edge), 9)
+            self.r.set(node['shortcode'], compressed_edge)
             self.r.sadd('shortcodes',node['shortcode'])
             self.r.sadd('shortcodes_'+self.hashtag,node['shortcode'])
             #print edge

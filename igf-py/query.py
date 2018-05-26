@@ -2,7 +2,7 @@ import redis
 import json
 import sys
 import argparse
-
+import zlib
 from IGFirehose import IGFirehose
 
 parser = argparse.ArgumentParser()
@@ -13,8 +13,15 @@ parser.add_argument("-c", "--config", help="config file",required=True,type=str)
 args = parser.parse_args()
 
 igf = IGFirehose(args.config)
-imgs=igf.fetch(args.tag,n=args.number,keys=('hashtags'))
-
+imgs=igf.fetch_raw(args.tag,n=args.number)
+for img in imgs:
+	s=json.dumps(img)
+	compressed =zlib.compress(s, 9)
+	print len(s),len(compressed),float(len(compressed))/len(s)
+	print img
+	sys.exit(1)
+	print compressed
+sys.exit(1)
 hashtag_counts={}
 norm=0
 for img in imgs:
