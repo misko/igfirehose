@@ -95,6 +95,11 @@ class InstagramSpider(scrapy.Spider):
         graphql = json.loads(response.text)
         has_next = graphql['graphql']['hashtag']['edge_hashtag_to_media']['page_info']['has_next_page']
         edges = graphql['graphql']['hashtag']['edge_hashtag_to_media']['edges']
+        try:
+            total = int(graphql['graphql']['hashtag']['edge_hashtag_to_media']['count'])
+            self.r.set('sizeof_'+self.hashtag,total)
+        except:
+            pass
 
         #if not hasattr(self, 'starting_shorcode') and len(edges):
         #    self.starting_shorcode = edges[0]['node']['shortcode']
