@@ -46,7 +46,8 @@ def tag_view(tag):
 	for img in imgs:
 		img['thumbnail']=img['thumbnails'][1]['src']
 		img['time']=datetime.datetime.fromtimestamp(img['timestamp']).strftime('%c')
-	return render_template('tag_view.html',tag=tag,imgs=imgs)
+	wordcloud=url_for('static', filename='wordclouds/'+tag+'.png')
+	return render_template('tag_view.html',tag=tag,imgs=imgs,wordcloud=wordcloud)
 	
 
 if __name__ == '__main__':

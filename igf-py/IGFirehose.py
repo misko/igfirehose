@@ -54,7 +54,7 @@ class IGFirehose():
         h=[]
         for x in s.split():
             if x[0]=='#' and len(x)>1:
-                h.append(x)
+                h.append(x.lower())
         return h
 
     def add_auto_tag(self,tag):
