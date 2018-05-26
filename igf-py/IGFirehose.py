@@ -39,7 +39,10 @@ class IGFirehose():
         return self.r.smembers('tags')
 
     def get_n_mined(self,tag):
-        return self.r.scard('shortcodes_'+tag)
+        if tag=='':
+		return self.r.scard('shortcodes')
+	else:
+        	return self.r.scard('shortcodes_'+tag)
 
     def get_n_tag(self,tag):
         return self.r.get('sizeof_'+tag)
@@ -51,7 +54,7 @@ class IGFirehose():
                 h.append(x)
         return h
 
-    def fetch(self,tag,n=200,keys=('hashtags','url','likes','owner','timestamp','thumbnails')):
+    def fetch(self,tag,n=200,keys=('hashtags','url','likes','owner','timestamp','thumbnails','shortcode')):
         #granb
         shortcodes=self.r.srandmember("shortcodes_"+tag,-n)
         d=[]
@@ -74,5 +77,7 @@ class IGFirehose():
                 current['timestamp'] = int(edge['node']['taken_at_timestamp'])
 	    if 'thumbnails' in keys:
                 current['thumbnails'] = edge['node']['thumbnail_resources']
+	    if 'shortcode' in keys:
+                current['shortcode'] = edge['node']['shortcode']
             d.append(current)
         return d

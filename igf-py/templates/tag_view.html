@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}IG Firehose{% endblock %}
+
+{% block content %}
+
+    <main role="main">
+
+      <section class="jumbotron text-center">
+        <div class="container">
+          <h1 class="jumbotron-heading">#{{ tag }}</h1>
+          <p class="lead text-muted">An overview of images mined by IGFirehose. Total Images mined for {{ tag }} <span id="imagesmined">...</span></p>
+        </div>
+      </section>
+
+      <div class="album py-5 bg-light">
+        <div class="container">
+
+          <div class="row">
+	    {% for img in imgs %}
+            <div class="col-md-4">
+              <div class="card mb-4 box-shadow">
+                <img class="card-img-top" src="{{ img.thumbnail }}" alt="Card image cap">
+                <div class="card-body">
+                  <p class="card-text"><3 {{ img.likes }} </p>
+		  <p class="card-text"> 
+			{% for hashtag in img.hashtags %} 
+				<a href="https://www.instagram.com/explore/tags/{{ hashtag }}/?hl=en">{{ hashtag }}</a>
+			{% endfor %} </p>
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div class="btn-group">
+                      <a href="{{ img.url }}" target="_blank"><button type="button" class="btn btn-sm btn-outline-secondary">Full</button></a>
+                      <a href="https://www.instagram.com/p/{{ img.shortcode }}/" target="_blank"><button type="button" class="btn btn-sm btn-outline-secondary">Source</button></a>
+                    </div>
+                    <small class="text-muted">{{ img.time }}</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+
+    <script>
+$(document).ready(function () {
+
+//https://stackoverflow.com/questions/1990512/add-comma-to-numbers-every-three-digits
+$.fn.digits = function(){ 
+    return this.each(function(){ 
+        $(this).text( $(this).text().replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,") ); 
+    })
+}
+
+function update_mined() {
+	$.getJSON( "/mined/{{ tag }}", function( data ) {
+		$("#imagesmined").text(data).digits();
+	});
+}
+setInterval(update_mined, 3000);
+update_mined();
+});
+    </script>
+{% endblock %}
