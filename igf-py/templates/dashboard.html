@@ -21,7 +21,9 @@
               <div class="card mb-4 box-shadow">
                 <img class="card-img-top" src="{{ tag.thumbnail }}" alt="Card image cap">
                 <div class="card-body">
-                  <p class="card-text">#{{ tag.name }} , total images {{ tag.size }} , mined {{ tag.mined }}</p>
+                  <p class="card-text"><a href="https://www.instagram.com/explore/tags/{{ tag.name }}/?hl=en" target="_blank">#{{ tag.name }}</a></p>
+		  <p class="card-text">{{ tag.size }} images</p>
+                  <p class="card-text">{{ tag.percent }}%  mined ({{ tag.mined }} images)</p>
                   <div class="d-flex justify-content-between align-items-center">
                     <div class="btn-group">
                       <a href="/tag_view/{{ tag.name }}" target="_blank"><button type="button" class="btn btn-sm btn-outline-secondary">View</button></a>
