@@ -10,6 +10,6 @@ hashtag=$1
 pushd /tmp/igf
 
 while [ 1 -lt 2 ]; do
-         scrapy crawl -a config_fn=/tmp/igf/igf-py/igf.conf $1
+         scrapy crawl -a config_fn=/tmp/igf/igf-py/igf.conf -a hashtag=$1 hashtag
          sleep 30
 done

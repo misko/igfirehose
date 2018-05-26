@@ -18,7 +18,7 @@ class InstagramSpider(scrapy.Spider):
         'FEED_URI': './scraped/%(name)s/%(hashtag)s/%(date)s',
     }
     checkpoint_path = './scraped/%(name)s/%(hashtag)s/.checkpoint'
-    handle_httpstatus_list = [404] #,429]
+    handle_httpstatus_list = [404,429]
 
 #    @classmethod
 #    def from_crawler(cls, crawler, *args, **kwargs):
@@ -93,16 +93,16 @@ class InstagramSpider(scrapy.Spider):
 
     # Entry point for the spider
     def parse(self, response):
+        return self.parse_htag(response)
+
+    # Method for parsing a hastag
+    def parse_htag(self, response):
         if response.status == 404:
             #got 404 , reset tag?
             print "404,reset tag?"
         if response.status == 429:
             schedule.rm_auto_tag(self.r,self.hashtag)
             raise CloseSpider('FAIL: All out of love, and so lost without you')
-        return self.parse_htag(response)
-
-    # Method for parsing a hastag
-    def parse_htag(self, response):
         print self.r.ttl('mining_'+self.hashtag)
         print "AGENT",response.request.headers['User-Agent'] 
         #Load it as a json object
