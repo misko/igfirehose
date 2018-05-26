@@ -47,18 +47,32 @@ class InstagramSpider(scrapy.Spider):
 #        print "CLOSING!",self.r
 #        print "CLOSING!",self.r
 #        print "CLOSING!",self.r
+    def read_config(self):
+        f=open(self.config_fn)
+        for line in f:
+            field=line.split()[0]
+            value=line[len(field)+1:].strip()
+            self.config[field]=value
+            if field=='port':
+                self.config[field]=int(self.config[field])
+        f.close()
 
-    def __init__(self, hashtag='',redis_host='',redis_password='',redis_port=0):
-        self.redis_port=int(redis_port)
-        self.redis_host=redis_host
-        self.redis_password=redis_password
+    def redis_connect(self):
+        self.r = redis.Redis(
+                host=self.config['redis-host'],
+                port=self.config['redis-port'], 
+                password=self.config['redis-password'])
+
+    def __init__(self, hashtag='',config_fn=""):
+	self.config={}
+	self.config_fn=config_fn
+	self.read_config()
         self.hashtag=hashtag
         self.reset()
         self.auto_tag=False
 
     def reset(self):
-        self.r = redis.Redis(
-            host=self.redis_host,password=self.redis_password,port=self.redis_port)
+	self.redis_connect()
         if self.hashtag == '':
             self.hashtag,self.rid=schedule.get_tag_auto(self.r,60)
             self.auto_tag=True
