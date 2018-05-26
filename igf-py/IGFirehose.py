@@ -40,12 +40,15 @@ class IGFirehose():
 
     def get_n_mined(self,tag):
         if tag=='':
-		return self.r.scard('shortcodes')
+		return int(self.r.scard('shortcodes'))
 	else:
-        	return self.r.scard('shortcodes_'+tag)
+        	return int(self.r.scard('shortcodes_'+tag))
 
     def get_n_tag(self,tag):
-        return self.r.get('sizeof_'+tag)
+        sz=self.r.get('sizeof_'+tag)
+	if not sz:
+		return 0
+	return int(sz)
 
     def string_to_hashtags(self,s):
         h=[]
@@ -53,6 +56,9 @@ class IGFirehose():
             if x[0]=='#' and len(x)>1:
                 h.append(x)
         return h
+
+    def add_auto_tag(self,tag):
+	 self.r.sadd("tags",tag)
 
     def fetch(self,tag,n=200,keys=('hashtags','url','likes','owner','timestamp','thumbnails','shortcode')):
         #granb

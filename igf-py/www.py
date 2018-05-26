@@ -16,8 +16,8 @@ def dashboard():
 	for tag in str_tags:
 		t={}
 		t['name']=tag
-		t['size']=igf.get_n_tag(tag)
-		t['mined']=igf.get_n_mined(tag)
+		t['size']="{:,}".format(igf.get_n_tag(tag))
+		t['mined']="{:,}".format(igf.get_n_mined(tag))
 		e=igf.fetch(tag,n=1)
 		if len(e)>0:
 			t['thumbnail']=e[0]['thumbnails'][1]['src']
