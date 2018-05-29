@@ -11,7 +11,7 @@
           <p class="lead text-muted">An overview of images mined by IGFirehose.</p>
           <p class="lead text-muted"><span id="imagesmined">...</span> / {{ total_images }} ~ Mined / Total</p>
           <div class="progress">
-            <div class="progress-bar" role="progressbar" aria-valuenow="{{ total_progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="progress-bar" role="progressbar" style="width: {{ total_progress_int }}%" aria-valuenow="{{ total_progress_int }}" aria-valuemin="0" aria-valuemax="100"></div>
 	  </div>
           <p class="lead text-muted">{{ total_progress }}%</p>
         </div>
