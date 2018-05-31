@@ -29,7 +29,7 @@ hashtag_counts.sort(reverse=True)
 
 for count,hashtag in hashtag_counts:
     if count>4:
-        print float(count)/posts_with_hashtags,hashtag
+        print float(count)/posts_with_hashtags,hashtag[1:]
 
 #get top 100 tags and graph
 #get top 101-200 tags and graph

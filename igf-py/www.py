@@ -30,8 +30,10 @@ def dashboard():
 
 		t['size']="{:,}".format(t['size'])
 		t['mined']="{:,}".format(t['mined'])
-		e=igf.fetch(tag,n=1)
-		print e
+		g=igf.fetch(tag,n=1)
+		e=[]
+		for x in g:
+			e.append(x)
 		if len(e)>0:
 			t['thumbnail']=e[0]['thumbnails'][1]
 		else:
@@ -50,11 +52,15 @@ def n_mined(tag=""):
 
 @app.route('/tag_view/<tag>')
 def tag_view(tag):
-	imgs=igf.fetch(tag,n=100)
+	imgs_g=igf.fetch(tag,n=100)
+	imgs=[]
+	for x in imgs_g:
+		imgs.append(x)
 	for img in imgs:
 		img['thumbnail']=img['thumbnails'][1]
 		img['time']=datetime.datetime.fromtimestamp(img['timestamp']).strftime('%c')
 	wordcloud=url_for('static', filename='wordclouds/'+tag+'.png')
+
 	return render_template('tag_view.html',tag=tag,imgs=imgs,wordcloud=wordcloud)
 	
 

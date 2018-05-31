@@ -1,3 +1,9 @@
+# encoding=utf8  
+import sys
+
+reload(sys)
+sys.setdefaultencoding('utf8')
+import math
 import redis
 import json
 import zlib
@@ -77,11 +83,18 @@ class IGFirehose():
     def get_mined_tags(self):
         return self.r.smembers('tags')
 
+    def get_is_done(self,tag):
+        return self.r.get('done_'+tag)
+
     def get_n_mined(self,tag):
+	x=None
         if tag=='':
-		return int(self.r.scard('shortcodes'))
+		x=self.r.scard('shortcodes')
 	else:
-        	return int(self.r.scard('shortcodes_'+tag))
+        	x=self.r.scard('shortcodes_'+tag)
+	if x==None:
+		return 0
+	return int(x)
 
     def get_n_tag(self,tag):
         sz=self.r.get('sizeof_'+tag)
@@ -122,15 +135,76 @@ class IGFirehose():
             edge = self.str_to_edges(edge)
 	    d.append(edge)
         return d
+    
+    # pr ( tagA | tagB )
+    def get_co_p(self,tagA,tagB,n=1000):
+        # get n posts from tagB
+        tagA = tagA.lower()
+        tagB = tagB.lower()
+        posts = self.fetch(tagB,keys=['hashtags'],n=n)
+        hits=0
+        norm=0
+        for post in posts:
+            if ('#'+tagB) in post['hashtags']:
+                norm+=1
+                if ('#'+tagA) in post['hashtags']:
+                    hits+=1
+        return hits/float(norm+1)
+
+    def get_top_k_co_tags(self,tagA,k=10,n=1000):
+        hits=0
+        co_tags={}
+        posts = self.fetch(tagA,keys=['hashtags'],n=n)
+        for post in posts:
+            hashtags=map( lambda  x : x.lower() , post['hashtags'] )
+            for tag in hashtags:
+                if tag[1:]==tagA:
+                    continue
+                if tag not in co_tags:
+                    co_tags[tag]=0
+                co_tags[tag]+=1
+        #lets sort and return
+        l=[]
+        for tag in co_tags:
+            l.append((co_tags[tag],tag))
+        l.sort(reverse=True)
+        return [ x[1][1:] for x in l[:k] ]
+    
+    #THIS IS NOT KL....
+    def get_sim(self,tagA,tagB,k=10,n=1000):
+        s=0
+        tags_used=0
+        for tagZ in self.get_top_k_co_tags(tagA,k+1,n):
+            if tagZ==tagB:
+                continue
+            p_i=self.get_co_p(tagZ,tagA,n)
+            q_i=self.get_co_p(tagZ,tagB,n)
+            if q_i!=0:
+                s+=p_i*math.log(p_i/q_i)
+            else:
+                s+=10*p_i
+            tags_used+=1
+            if tags_used>=k:
+                break
+        return s
+
 
     def fetch(self,tag,n=200,keys=('hashtags','url','likes','owner','timestamp','thumbnails','shortcode')):
         #granb
-        shortcodes=self.r.srandmember("shortcodes_"+tag,-n)
-        d=[]
+	shortcodes=None
+	if n>=0:
+            shortcodes=self.r.srandmember("shortcodes_"+tag,-n)
+        else:
+            shortcodes=self.r.smembers("shortcodes_"+tag)
+        #d=[]
         for shortcode in shortcodes:
 	    edge = self.get_shortcode(shortcode)
-            d.append(edge)
-        return d
+	    trimmed_edge = {}
+            for key in keys:
+                trimmed_edge[key]=edge[key]
+            yield edge
+            #d.append(edge)
+        #return d
 
     def shortcodes(self,n=0):
 	if n>0:
