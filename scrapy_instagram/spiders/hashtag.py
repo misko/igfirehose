@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# encoding=utf8  
+import sys  
+
+reload(sys)  
+sys.setdefaultencoding('utf8')
 import scrapy
 import json
 import time
@@ -8,7 +13,6 @@ from scrapy.exceptions import CloseSpider
 import schedule
 from scrapy_instagram.items import Post
 import zlib
-import sys
 import redis
 
 
@@ -79,14 +83,16 @@ class InstagramSpider(scrapy.Spider):
                 port=self.config['redis-port'], 
                 password=self.config['redis-password'])
 
-    def __init__(self, hashtag='',config_fn=""):
+    #def __init__(self, hashtag='',config_fn="",n=""):
+    def __init__(self, *args, **kwargs):
 	self.config={}
-	self.config_fn=config_fn
+	self.config_fn=kwargs['config_fn']
 	self.read_config()
-        self.hashtag=hashtag
+        self.hashtag=kwargs['hashtag']
         self.reset()
         self.auto_tag=False
 	self.rid=None
+        self.n=int(kwargs['n'])
 
     def reset(self):
 	self.redis_connect()
@@ -159,17 +165,22 @@ class InstagramSpider(scrapy.Spider):
             #yield scrapy.Request("https://www.instagram.com/p/"+shortcode+"/?__a=1", callback=self.parse_post)
         now=int(time.time())
         sz=self.r.scard('shortcodes_'+self.hashtag)
-        print "SPEED",self.count/float(now-self.start),"NEW",self.count,"PUNT",self.punt,"TOTAL",sz
+        if self.n>0 and sz>self.n:
+            print "DONE SCRAPING"
+            raise CloseSpider('DONE: MY WORK IS DONE!')
+        print "SPEED",self.count/(float(now-self.start)+1),"NEW",self.count,"PUNT",self.punt,"TOTAL",sz
 
         if has_next:
             end_cursor = graphql['graphql']['hashtag']['edge_hashtag_to_media']['page_info']['end_cursor']
-            self.r.set("resume_"+self.hashtag, "https://www.instagram.com/explore/tags/"+self.hashtag+"/?__a=1&max_id="+end_cursor)
+            self.r.set("resume_"+self.hashtag.decode('utf-8'), "https://www.instagram.com/explore/tags/"+self.hashtag+"/?__a=1&max_id="+end_cursor)
             #hits_per_hour=200.0
             #seconds_per_hit=(60.0*60.0)/hits_per_hour
             #time.sleep(seconds_per_hit)
             if self.auto_tag and self.r.ttl('mining_'+self.hashtag)<180:
                 schedule.refresh_auto_tag(self.r,self.hashtag,self.rid,1200)
             yield scrapy.Request("https://www.instagram.com/explore/tags/"+self.hashtag+"/?__a=1&max_id="+end_cursor, callback=self.parse_htag)
+        else:
+            self.r.set('done_'+self.hashtag,time.time())
            
     def parse_post(self, response):
         graphql = json.loads(response.text)

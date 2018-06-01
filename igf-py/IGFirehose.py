@@ -146,10 +146,14 @@ class IGFirehose():
         norm=0
         for post in posts:
             if ('#'+tagB) in post['hashtags']:
-                norm+=1
+                #norm+=1
+		#if len(post['hashtags'])>20:
+		#	continue
+                norm+=len(post['hashtags'])
                 if ('#'+tagA) in post['hashtags']:
                     hits+=1
-        return hits/float(norm+1)
+                    continue
+        return hits/float(max(norm,1))
 
     def get_top_k_co_tags(self,tagA,k=10,n=1000):
         hits=0
@@ -171,7 +175,7 @@ class IGFirehose():
         return [ x[1][1:] for x in l[:k] ]
     
     #THIS IS NOT KL....
-    def get_sim(self,tagA,tagB,k=10,n=1000):
+    def get_sim(self,tagA,tagB,k=50,n=1000):
         s=0
         tags_used=0
         for tagZ in self.get_top_k_co_tags(tagA,k+1,n):
@@ -180,7 +184,7 @@ class IGFirehose():
             p_i=self.get_co_p(tagZ,tagA,n)
             q_i=self.get_co_p(tagZ,tagB,n)
             if q_i!=0:
-                s+=p_i*math.log(p_i/q_i)
+                s+=p_i*min(10,math.log(p_i/q_i))
             else:
                 s+=10*p_i
             tags_used+=1
