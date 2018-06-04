@@ -18,21 +18,28 @@ parser.add_argument("-b","--breeds", help="breeds",type=str,default="bulldog,hus
 parser.add_argument("-n","--number", help="hashtag",type=int, default=5000)
 parser.add_argument("-p","--parent", help="hashtag",type=str,default="dogsofinstagram")
 parser.add_argument("-c", "--config", help="config file",required=True,type=str)
+parser.add_argument("-v","--verbose", help="increase output verbosity",action="store_true")
 args = parser.parse_args()
 
 
-igf = IGFirehose(args.config)
-s=[]
 breeds=args.breeds.split(',')
-for breed in breeds:
+igf = IGFirehose(args.config)
+ns=igf.get_co_p(breeds,args.parent,n=args.number)
+ps=igf.get_co_p(breeds,args.tag,n=args.number)
+s=[]
+for x in xrange(len(breeds)):
+	breed=breeds[x]
 	#p=igf.get_co_p(breed,args.tag,n=args.number)/(max(igf.get_co_p(breed,args.parent,n=args.number),0.01))
-	n=igf.get_co_p(breed,args.parent,n=args.number)
+	#n=igf.get_co_p(breed,args.parent,n=args.number)
+	n=ns[x]
 	if n!=0:
-		p=igf.get_co_p(breed,args.tag,n=args.number)/n
+		#p=igf.get_co_p(breed,args.tag,n=args.number)
+		p=ps[x]
 		#p=igf.get_co_p(args.tag,breed)
 		if p!=0:
-			#print "Pr(",breed,"|",args.tag,") / Pr(",breed,"|",args.parent,")=",p
-			s.append((p,breed,n))
+			if args.verbose:
+				print "Pr(",breed,"|",args.tag,") / Pr(",breed,"|",args.parent,")=",p/n,p,n
+			s.append((min(1.0,p/n),breed,n))
 s.sort(reverse=True)
 #print "Droppping",s[0]
 #e_co_breed=sum([ x[0] for x in s[1:]])/float(len(s)-1)

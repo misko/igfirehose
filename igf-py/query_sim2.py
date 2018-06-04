@@ -28,10 +28,20 @@ def memo(tagA,tagB):
 
 igf = IGFirehose(args.config)
 tags = args.tags.split(',')
+
+#print headers
+r=['X']
 for xA in xrange(len(tags)):
+	r.append(tags[xA])
+print ",".join(r)
+	
+for xA in xrange(len(tags)): #rows
 	tagA=tags[xA]
-	for xB in xrange(xA+1,len(tags)):
+	r=[tagA]
+	for xB in xrange(len(tags)):
 		tagB=tags[xB]
                 fwd=memo(tagA,tagB)
-		bwd=memo(tagB,tagA)
-		print tagA,tagB,max(fwd,bwd),min(fwd,bwd),(fwd+bwd)/2,fwd,bwd
+		#bwd=memo(tagB,tagA)
+		#print tagA,tagB,max(fwd,bwd),min(fwd,bwd),(fwd+bwd)/2,fwd,bwd
+		r.append("%0.3f" % fwd)
+	print ",".join(r)

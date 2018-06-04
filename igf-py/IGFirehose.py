@@ -136,62 +136,141 @@ class IGFirehose():
 	    d.append(edge)
         return d
     
-    # pr ( tagA | tagB )
-    def get_co_p(self,tagA,tagB,n=1000):
+#    # pr ( tagA | tagB )
+#    def get_co_p2(self,tagAs,tagB1,tagB2,n=1000):
+#	if type(tagAs) is not list:
+#		print "NEEDS TO BE LIST!"
+#		sys.exit(1)
+#        # get n posts from tagB
+#	tagBs = [ tagB1.lower() , tagB2.lower() ]
+#	
+#	posts_raw = [ self.fetch(tagB1,keys=['hashtags'],n=n*10) , self.fetch(tagB2,keys=['hashtags'],n=n*10) ]
+#	mine_from = 0 
+#        posts=[]
+#        for post in posts_raw[mine_from]:
+#		if 
+#		mine_from=1-mine_from
+#	r={}
+#	for tagA in tagAs:
+#		r[tagA.lower()]=0
+#	norm=0
+#	for post in posts:
+#		if ('#'+tagB) in post['hashtags']:
+#			norm+=1
+#			for tagA in tagAs:
+#				tagA = tagA.lower()
+#				#if len(post['hashtags'])>20:
+#				#	continue
+#				#norm+=len(post['hashtags'])
+#				if ('#'+tagA) in post['hashtags']:
+#				    r[tagA]+=1.0/len(post['hashtags'])
+#		#r.append(hits/float(max(norm,1)))
+#	return [ r[tagA.lower()]/float(norm) for tagA in tagAs ]
+ 
+    # pr ( tagAs | posts )
+    def get_co_p_from_posts(self,tagAs,tagBs,posts):
+	if type(tagAs) is not list:
+		print "NEEDS TO BE LIST!"
+		sys.exit(1)
+	if type(tagBs) is not list:
+		print "NEEDS TO BE LIST!"
+		sys.exit(1)
         # get n posts from tagB
-        tagA = tagA.lower()
-        tagB = tagB.lower()
-        posts = self.fetch(tagB,keys=['hashtags'],n=n)
-        hits=0
-        norm=0
-        for post in posts:
-            if ('#'+tagB) in post['hashtags']:
-                #norm+=1
-		#if len(post['hashtags'])>20:
-		#	continue
-                norm+=len(post['hashtags'])
-                if ('#'+tagA) in post['hashtags']:
-                    hits+=1
-                    continue
-        return hits/float(max(norm,1))
+	r={}
+	for tagA in tagAs:
+		r[tagA]=0
+	norm=0
+	for post in posts:
+		post_has_all_tagBs=True
+		for tagB in tagBs:
+			if ('#'+tagB) not in post['hashtags']:
+				post_has_all_tagBs=False
+				break
+		if not post_has_all_tagBs:
+			continue
+		norm+=1
+		for tagA in tagAs:
+			if ('#'+tagA) in post['hashtags']:
+			    r[tagA]+=1.0/len(post['hashtags'])
+	return [ r[tagA.lower()]/float(norm) for tagA in tagAs ]
+       
 
-    def get_top_k_co_tags(self,tagA,k=10,n=1000):
+    # pr ( tagA | tagB )
+    def get_co_p(self,tagAs,tagB,n=1000):
+	if type(tagAs) is not list:
+		print "NEEDS TO BE LIST!"
+		sys.exit(1)
+        # get n posts from tagB
+	tagB = tagB
+	posts = self.fetch(tagB,keys=['hashtags'],n=n)
+	r={}
+	for tagA in tagAs:
+		r[tagA]=0
+	norm=0
+	for post in posts:
+		if ('#'+tagB) in post['hashtags']:
+			norm+=1
+			for tagA in tagAs:
+				tagA = tagA.lower()
+				#if len(post['hashtags'])>20:
+				#	continue
+				#norm+=len(post['hashtags'])
+				if ('#'+tagA) in post['hashtags']:
+				    r[tagA]+=1.0/len(post['hashtags'])
+		#r.append(hits/float(max(norm,1)))
+	return [ r[tagA.lower()]/float(norm) for tagA in tagAs ]
+
+    def get_top_k_co_tags(self,tagA,k=50,n=1000):
         hits=0
         co_tags={}
         posts = self.fetch(tagA,keys=['hashtags'],n=n)
         for post in posts:
-            hashtags=map( lambda  x : x.lower() , post['hashtags'] )
-            for tag in hashtags:
+            for tag in post['hashtags']:
                 if tag[1:]==tagA:
                     continue
                 if tag not in co_tags:
                     co_tags[tag]=0
-                co_tags[tag]+=1
+                #co_tags[tag]+=1
+                co_tags[tag]+=1.0/len(post['hashtags'])
         #lets sort and return
         l=[]
         for tag in co_tags:
             l.append((co_tags[tag],tag))
         l.sort(reverse=True)
         return [ x[1][1:] for x in l[:k] ]
-    
+   
+ 
     #THIS IS NOT KL....
     def get_sim(self,tagA,tagB,k=50,n=1000):
         s=0
         tags_used=0
-        for tagZ in self.get_top_k_co_tags(tagA,k+1,n):
+        top_k=self.get_top_k_co_tags(tagA,k+1,n)
+        p_i=self.get_co_p(top_k,tagA,n)
+        q_i=self.get_co_p(top_k,tagB,n)
+        for idx in xrange(len(top_k)):
+            tagZ=top_k[idx]
             if tagZ==tagB:
                 continue
-            p_i=self.get_co_p(tagZ,tagA,n)
-            q_i=self.get_co_p(tagZ,tagB,n)
-            if q_i!=0:
-                s+=p_i*min(10,math.log(p_i/q_i))
+            if q_i[idx]!=0:
+		if p_i[idx]>0:
+                	s+=p_i[idx]*min(10,math.log(p_i[idx]/q_i[idx]))
             else:
-                s+=10*p_i
+                s+=10*p_i[idx]
             tags_used+=1
             if tags_used>=k:
                 break
         return s
 
+    def fetch2(self,tagA,tagB,n=200,keys=('hashtags','url','likes','owner','timestamp','thumbnails','shortcode')):
+        assert(n>0)
+        posts=[]
+        while len(posts)<n:
+            posts_gs = [ self.fetch(tagA,n=n,keys=keys) , self.fetch(tagB,n=n,keys=keys) ]
+            for posts_g in posts_gs:
+            	for post in posts_g:
+                    if ('#'+tagA) in post['hashtags'] and ('#'+tagB) in post['hashtags']:
+                        posts.append(post)
+        return posts
 
     def fetch(self,tag,n=200,keys=('hashtags','url','likes','owner','timestamp','thumbnails','shortcode')):
         #granb

@@ -9,6 +9,7 @@ in_file=sys.argv[1]
 hashtag_counts_d={}
 posts_with_hashtags=0
 f=sys.stdin
+norm=0
 if in_file!='-':
     f=open(in_file)
 for line in f:
@@ -19,7 +20,8 @@ for line in f:
         if len(hashtag)>0:
             if hashtag not in hashtag_counts_d:
                 hashtag_counts_d[hashtag]=0
-            hashtag_counts_d[hashtag]+=1
+	    norm+=1
+            hashtag_counts_d[hashtag]+=1 #.0/len(line)
 
 hashtag_counts=[]
 for hashtag in hashtag_counts_d:
@@ -29,7 +31,8 @@ hashtag_counts.sort(reverse=True)
 
 for count,hashtag in hashtag_counts:
     if count>4:
-        print float(count)/posts_with_hashtags,hashtag[1:]
+        #print float(count)/posts_with_hashtags,hashtag[1:]
+        print float(count)/norm,hashtag[1:]
 
 #get top 100 tags and graph
 #get top 101-200 tags and graph

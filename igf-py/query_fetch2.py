@@ -19,4 +19,5 @@ parser.add_argument("-c", "--config", help="config file",required=True,type=str)
 args = parser.parse_args()
 
 igf = IGFirehose(args.config)
-print igf.get_co_p([args.tagA],args.tagB,n=args.number)[0]
+for img in  igf.fetch2(args.tagA,args.tagB,n=args.number,keys=['hashtags']):
+	print u' '.join(img['hashtags']).encode('utf-8').strip()
