@@ -19,6 +19,7 @@ parser.add_argument("-o", "--online", help="tagback",type=int,default=20)
 parser.add_argument("-t", "--threshold", help="t",type=int,default=0.0002)
 parser.add_argument("-p", "--pool-size", help="pool size",type=int,default=16)
 parser.add_argument("-d", "--out-dir", help="out-dir",type=str,default='algo_out')
+parser.add_argument("-g", "--sigma", help="out-dir",type=float,default=3.0)
 args = parser.parse_args()
 import errno    
 import os
@@ -86,7 +87,7 @@ def update_matrix(N):
     	    M[tagB][tagAs[j]]=r[j]
 	
 
-def print_m(M,N):
+def print_m(M,N,zero_out=False):
     s=[",".join( ["X"] + N)]
     for i in N: # pick the row
         row=[]
@@ -95,7 +96,19 @@ def print_m(M,N):
                 row.append(0)
 		continue
 	    row.append(M[i][j])
-        s.append(",".join([i]+["%0.3e" % x for x in row]) )
+	if zero_out:
+		row=np.array(row)
+		std=row.std()
+		avg=row.mean()
+		q=[]
+		for x in row:
+			if np.abs((x-avg)/std)>args.sigma:
+				q.append("")
+			else:
+				q.append("%0.3e" % x)
+		s.append(",".join([i]+q))
+	else:
+        	s.append(",".join([i]+["%0.3e" % x for x in row]) )	
     return "\n".join(s) 
 	
 # X is cotag matrix
@@ -103,14 +116,23 @@ def print_m(M,N):
 def prs(M,N):
     r={}
     for i in N: # pick the col
-        r[i]=0
-        norm=0
+        acc=[]
         for j in N: # for each row
             if j==i:
                 continue
-            r[i]+=M[j][i]
-            norm+=1.0
-        r[i]/=norm
+            acc.append(M[j][i])
+	acc=np.array(acc)
+	std=acc.std()
+	avg=acc.mean()
+	acc_no_outliers=[]
+	for x in acc:
+		if np.abs((x-avg)/std)>args.sigma:
+			pass
+		else:
+			acc_no_outliers.append(x)
+	r[i]=sum(acc_no_outliers)/len(acc_no_outliers)
+	if len(acc_no_outliers)!=len(acc):
+		print "REMOVED",len(acc)-len(acc_no_outliers),"Outliers from",i
     return r
 
 p = Pool(args.pool_size)
@@ -139,11 +161,15 @@ for _,tag in freqs:
 		print "WINNER",argmax
 		if argmax[0]>args.threshold:
 			matrix=print_m(M,N)
+			matrix_zo=print_m(M,N,zero_out=True)
 			f=open(args.out_dir+'/'+argmax[1]+'.txt','w')
 			f.write(str(argmax)+'\n')
 			f.write(",".join(N)+'\n')
 			f.write(",".join(S)+'\n')
 			f.write(matrix+'\n')
+			f.write('\n')
+			f.write('\n')
+			f.write(matrix_zo+'\n')
 			f.close()
 			S.append(argmax[1])
 			N.remove(argmax[1])
