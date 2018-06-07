@@ -27,13 +27,14 @@ tags = args.tags.split(',')
 
 
 for tag in tags:
+	print "Q",tag
 	p=igf.get_co_p(tags,tag,n=args.number)
 	m[tag]={}
 	for x in xrange(len(tags)):
 		m[tag][tags[x]]=p[x]
 
 #print headers
-print "PR(A | B )"
+#print "PR(A | B )"
 r=['B \ A']
 for xA in xrange(len(tags)):
 	r.append(tags[xA])

@@ -1,5 +1,6 @@
 #from scipy.cluster.hierarchy import dendrogram, linkage
 #from matplotlib import pyplot as plt
+import tqdm
 import csv
 import argparse
 import numpy as np
@@ -38,6 +39,7 @@ def mkdir_p(path):
 
 mkdir_p(args.out_dir)
 igf = IGFirehose(args.config)
+todo=[]
 
 #first get hashtags and lets check frequencies
 def get_freq():
@@ -57,13 +59,11 @@ def get_freq():
     return s
 
 
-
 def update_helper(a):
     tagAs,tagB=a
     igf = IGFirehose(args.config)
     return igf.get_co_p(tagAs,tagB,n=args.number)
     
-
 def update_matrix(N):
     #make sure we have all needed entries
     todo=[]
@@ -79,7 +79,10 @@ def update_matrix(N):
 			if tagA not in M[tagB]:
 				todo.append(([tagA],tagB))
 				#M[tagB][tagA]=igf.get_co_p([tagA],tagB,n=args.number)[0]
-    rmap=p.map(update_helper, todo)
+    rmap=[]
+    for x in tqdm.tqdm(p.imap_unordered(update_helper, todo),total=len(todo)):
+        rmap.append(x)
+    #rmap=p.map(update_helper, todo)
     for i in xrange(len(todo)):
         tagAs,tagB = todo[i] #input
         r=rmap[i] #output
@@ -146,96 +149,35 @@ def prs(M,N):
 p = Pool(args.pool_size)
 
 freqs=get_freq()
-
-
 M={}
-B=[]
-N=[args.seed] #,'poodle','goldenretriever']
-S=[]
-if args.seed_breed!="":
-	f=open(args.seed_breed)
-	for line in f:
-		line=line.strip()
-		B.append(line)
-		N.append(line)
-	f.close()
-if args.seed_synonym!="":
-	f=open(args.seed_synonym)
-	for line in f:
-		line=line.strip()
-		S.append(line)
-for _,tag in freqs:
-	if tag==args.seed:
-		continue
-	if tag in S:
-		continue
-	if tag in N:
-		continue
+N=[ args.seed ]
+
+print "Tags before freq filter",len(freqs)
+freqs=list(filter(lambda x: x[0] > (10.0/args.hashtag_number), freqs))
+print "Tags after freq filter",len(freqs)
+
+def get_only_tag_backs(L,threshold=0.01):
+    todo=[ ([x[1]],args.seed) for x in L ]
+    todones=[]
+    for x in tqdm.tqdm(p.imap_unordered(update_helper, todo),total=len(todo)):
+        todones.append(x)
+    #todones=map(update_helper, todo)
+    r=[]
+    for idx in xrange(len(L)):
+        if todones[idx]>threshold:
+            r.append(L[idx][1])
+    return r
+
+
+for tag in get_only_tag_backs(freqs,threshold=args.tag_back):
 	#check the tag back
-	tb=igf.get_co_p([args.seed],tag,n=args.tag_back_number)[0]
-	if tb<args.tag_back:
-		print "Dropping",tag,"because of tagback",tb,"<",args.tag_back
-		continue
-	N.append(tag)
-	if len(N)>args.online: #try to reduce
-		update_matrix(N)
-		r,col_stats=prs(M,N)
-		vs=[ (float(r[i]),i) for i in r]
-		vs.sort(reverse=True)
-
-		#idx
-		idx=0
-		while idx<len(vs):
-			argmax=vs[idx]
-			if argmax[1] not in B:
-				break
-			idx+=1
-		if idx==len(vs):
-			continue	
-		print "WINNER",argmax
-		if argmax[0]>args.threshold:
-			matrix=print_m(M,N)
-			matrix_zo=print_m(M,N,col_stats=col_stats)
-			f=open(args.out_dir+'/'+argmax[1]+'.txt','w')
-			f.write(str(argmax)+'\n')
-			f.write(str(r)+'\n')
-			f.write(",".join(N)+'\n')
-			f.write(",".join(S)+'\n')
-			f.write(matrix+'\n')
-			f.write('\n')
-			f.write('\n')
-			f.write(matrix_zo+'\n')
-			f.close()
-			S.append(argmax[1])
-			N.remove(argmax[1])
+        if tag not in N:
+	    N.append(tag)
+print "Considering",len(N),"tags"
+update_matrix(N)
+matrix=print_m(M,N)
+f=open(args.out_dir+'/full.txt','w')
+f.write(matrix+'\n')
+f.close()
 	
-
-
-
-
-metric=[]
-col_headers=[]
-row_headers=[]
-with open(args.csv, 'rb') as csvfile:
-    csvreader = csv.reader(csvfile, delimiter=',', quotechar='|')
-    col_headers = csvreader.next()[1:]
-    for row in csvreader:
-        metric.append(map(float,row[1:]))
-        row_headers.append(row[0])
-
-eq=True
-for x in xrange(len(row_headers)):
-    if row_headers[x]!=col_headers[x]:
-        print "col and row headers need to be same :("
-        sys.exit(1)
-
-X=np.array(metric)
-
-
-    
-S,N=part(X,[],range(X.shape[0]))
-print ",".join([ row_headers[x] for x in S]) 
-print N
-# X[i][j] = pr( tagged(j) | tagged(i) )
-
 

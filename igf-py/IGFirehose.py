@@ -128,7 +128,11 @@ class IGFirehose():
         
 
     def fetch_raw(self,tag,n=200):
-        shortcodes=self.r.srandmember("shortcodes_"+tag,-n)
+        shortcodes=None
+        if n>0:	
+            shortcodes=self.r.srandmember("shortcodes_"+tag,-n)
+        else:
+            shortcodes=self.r.smembers("shortcodes_"+tag)
         d=[]
         for shortcode in shortcodes:
             edge = self.r.get(shortcode)
@@ -179,7 +183,7 @@ class IGFirehose():
 	r={}
 	for tagA in tagAs:
 		r[tagA]=0
-	norm=0
+	norm=1
 	for post in posts:
 		post_has_all_tagBs=True
 		for tagB in tagBs:
@@ -204,19 +208,25 @@ class IGFirehose():
 	tagB = tagB
 	posts = self.fetch(tagB,keys=['hashtags'],n=n)
 	r={}
+	hTagAs=[]
 	for tagA in tagAs:
 		r[tagA]=0
-	norm=0
+		hTagAs.append('#'+tagA.lower())
+        set_hTagAs=set(hTagAs)
+        hTagB='#'+tagB.lower()
+	norm=1
 	for post in posts:
-		if ('#'+tagB) in post['hashtags']:
+		if hTagB in post['hashtags']:
 			norm+=1
-			for tagA in tagAs:
-				tagA = tagA.lower()
-				#if len(post['hashtags'])>20:
-				#	continue
-				#norm+=len(post['hashtags'])
-				if ('#'+tagA) in post['hashtags']:
-				    r[tagA]+=1.0/len(post['hashtags'])
+                        if len(hTagAs)<len(post['hashtags']):
+				for hTagA in hTagAs:
+					if hTagA in post['hashtags']:
+					    r[hTagA[1:]]+=1.0/len(post['hashtags'])
+                        else:
+				for tag in post['hashtags']:
+					if tag in set_hTagAs:
+					    r[tag[1:].encode('utf-8')]+=1.0/len(post['hashtags'])
+
 		#r.append(hits/float(max(norm,1)))
 	return [ r[tagA.lower()]/float(norm) for tagA in tagAs ]
 
@@ -275,13 +285,12 @@ class IGFirehose():
     def fetch(self,tag,n=200,keys=('hashtags','url','likes','owner','timestamp','thumbnails','shortcode')):
         #granb
 	shortcodes=None
-	if n>=0:
+	if n>0:
             shortcodes=self.r.srandmember("shortcodes_"+tag,-n)
         else:
             shortcodes=self.r.smembers("shortcodes_"+tag)
         #d=[]
-        for shortcode in shortcodes:
-	    edge = self.get_shortcode(shortcode)
+        for edge in self.get_shortcodes(shortcodes):
 	    trimmed_edge = {}
             for key in keys:
                 trimmed_edge[key]=edge[key]
@@ -294,23 +303,26 @@ class IGFirehose():
 		return self.r.srandmember('shortcodes',-n)
         return self.r.smembers('shortcodes')
 
-    def get_shortcode(self,shortcode):
-        edge_str = self.r.get(shortcode)
-        if edge_str[0]=='{': #this may be old shortcode
-		try:
-			edge=json.loads(edge_str)
-			edge=self.trim(edge)
-        		edge_str = zlib.compress(json.dumps(edge), 9)
-        		self.r.set(shortcode,edge_str)
-		except:
-			pass
-	edge=self.str_to_edges(edge_str)
-	if 'version' not in edge:
-		edge=self.trim(edge)
-        	edge_str = zlib.compress(json.dumps(edge), 9)
-        	self.r.set(shortcode,edge_str)
-	edge=self.str_to_edges(edge_str)
-        return edge
+    def get_shortcodes(self,shortcodes):
+	if len(shortcodes)>0:
+		edge_strs = self.r.mget(shortcodes)
+		edges=[]
+		for edge_str in edge_strs:
+			if edge_str[0]=='{': #this may be old shortcode
+				try:
+					edge=json.loads(edge_str)
+					edge=self.trim(edge)
+					edge_str = zlib.compress(json.dumps(edge), 9)
+					self.r.set(shortcode,edge_str)
+				except:
+					pass
+			edge=self.str_to_edges(edge_str)
+			if 'version' not in edge:
+				edge=self.trim(edge)
+				edge_str = zlib.compress(json.dumps(edge), 9)
+				self.r.set(shortcode,edge_str)
+			edge=self.str_to_edges(edge_str)
+			yield edge
 
 
 
