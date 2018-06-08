@@ -303,26 +303,29 @@ class IGFirehose():
 		return self.r.srandmember('shortcodes',-n)
         return self.r.smembers('shortcodes')
 
-    def get_shortcodes(self,shortcodes):
+    def get_shortcodes(self,shortcodes,chunk=1024*8):
+	part=0
 	if len(shortcodes)>0:
-		edge_strs = self.r.mget(shortcodes)
-		edges=[]
-		for edge_str in edge_strs:
-			if edge_str[0]=='{': #this may be old shortcode
-				try:
-					edge=json.loads(edge_str)
+		shortcodes=list(shortcodes)
+		while part*chunk<len(shortcodes):
+			edge_strs = self.r.mget(shortcodes[part*chunk:min((part+1)*chunk,len(shortcodes))])
+			for edge_str in edge_strs:
+				if edge_str[0]=='{': #this may be old shortcode
+					try:
+						edge=json.loads(edge_str)
+						edge=self.trim(edge)
+						edge_str = zlib.compress(json.dumps(edge), 9)
+						self.r.set(shortcode,edge_str)
+					except:
+						pass
+				edge=self.str_to_edges(edge_str)
+				if 'version' not in edge:
 					edge=self.trim(edge)
 					edge_str = zlib.compress(json.dumps(edge), 9)
 					self.r.set(shortcode,edge_str)
-				except:
-					pass
-			edge=self.str_to_edges(edge_str)
-			if 'version' not in edge:
-				edge=self.trim(edge)
-				edge_str = zlib.compress(json.dumps(edge), 9)
-				self.r.set(shortcode,edge_str)
-			edge=self.str_to_edges(edge_str)
-			yield edge
+				edge=self.str_to_edges(edge_str)
+				yield edge
+			part+=1
 
 
 

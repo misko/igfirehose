@@ -80,7 +80,7 @@ def update_matrix(N):
 				todo.append(([tagA],tagB))
 				#M[tagB][tagA]=igf.get_co_p([tagA],tagB,n=args.number)[0]
     rmap=[]
-    for x in tqdm.tqdm(p.imap_unordered(update_helper, todo),total=len(todo)):
+    for x in tqdm.tqdm(p.imap(update_helper, todo),total=len(todo)):
         rmap.append(x)
     #rmap=p.map(update_helper, todo)
     for i in xrange(len(todo)):
@@ -159,7 +159,7 @@ print "Tags after freq filter",len(freqs)
 def get_only_tag_backs(L,threshold=0.01):
     todo=[ ([x[1]],args.seed) for x in L ]
     todones=[]
-    for x in tqdm.tqdm(p.imap_unordered(update_helper, todo),total=len(todo)):
+    for x in tqdm.tqdm(p.imap(update_helper, todo),total=len(todo)):
         todones.append(x)
     #todones=map(update_helper, todo)
     r=[]

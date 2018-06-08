@@ -98,7 +98,7 @@ def print_m(M,N,col_stats=None):
                 row.append(0)
 		continue
             if col_stats!=None:
-	        row.append(np.abs(M[i][j]-col_stats[j]['avg'])/col_stats[j]['std'])
+	        row.append(np.abs(M[i][j]-col_stats[j]['avg'])/(col_stats[j]['std']+0.0001))
             else:
 	        row.append(M[i][j])
         s.append(",".join([i]+["%0.3e" % x for x in row]) )	
@@ -213,29 +213,7 @@ for _,tag in freqs:
 
 
 
-metric=[]
-col_headers=[]
-row_headers=[]
-with open(args.csv, 'rb') as csvfile:
-    csvreader = csv.reader(csvfile, delimiter=',', quotechar='|')
-    col_headers = csvreader.next()[1:]
-    for row in csvreader:
-        metric.append(map(float,row[1:]))
-        row_headers.append(row[0])
-
-eq=True
-for x in xrange(len(row_headers)):
-    if row_headers[x]!=col_headers[x]:
-        print "col and row headers need to be same :("
-        sys.exit(1)
-
-X=np.array(metric)
-
-
-    
-S,N=part(X,[],range(X.shape[0]))
-print ",".join([ row_headers[x] for x in S]) 
-print N
-# X[i][j] = pr( tagged(j) | tagged(i) )
-
-
+f=open('N.txt','w')
+f.write([ "\n".join([ str(x) for x in N ])])
+f=open('S.txt','w')
+f.write([ "\n".join([ str(x) for x in S ])])
