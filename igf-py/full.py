@@ -14,7 +14,7 @@ parser.add_argument("-s","--seed", help="seed",type=str,required=True)
 parser.add_argument("-sb","--seed-breed", help="seed-breed",type=str,required=False,default="")
 parser.add_argument("-sd","--seed-synonym", help="seed-synonym",type=str,required=False,default="")
 parser.add_argument("-n","--number", help="hashtag",type=int, default=10000)
-parser.add_argument("-hn","--hashtag-number", help="hashtag",type=int, default=10000)
+parser.add_argument("-hn","--hashtag-number", help="hashtag",type=int, default=100000)
 parser.add_argument("-tn","--tag-back-number", help="hashtag",type=int, default=10000)
 parser.add_argument("-c", "--config", help="config file",required=True,type=str)
 parser.add_argument("-b", "--tag-back", help="tagback",type=float,default=0.005)
@@ -47,11 +47,11 @@ def get_freq():
     norm=0
     for img in igf.fetch(args.seed,n=args.hashtag_number,keys=('hashtags',)):
         if len(img['hashtags'])>0:
-            norm+=1.0
+            norm+=1.0 # len(img['hashtags'])
             for x in img['hashtags']:
                 if x not in h:
-                    h[x]=0
-                h[x]+=1
+                    h[x]=0.0
+                h[x]+=1.0
     for k in h:
         h[k]/=norm
     s=[ (h[k],k.encode('utf-8')[1:]) for k in h]
@@ -60,16 +60,17 @@ def get_freq():
 
 
 def update_helper(a):
-    tagAs,tagB=a
-    igf = IGFirehose(args.config)
-    return igf.get_co_p(tagAs,tagB,n=args.number)
+    tagAs,tagB,n=a
+    igf2 = IGFirehose(args.config)
+    r=igf2.get_co_p(tagAs,tagB,n=n)
+    return r
     
 def update_matrix(N):
     #make sure we have all needed entries
     todo=[]
     for tagB in N:
 	if tagB not in M:
-		todo.append((N,tagB))
+		todo.append((N,tagB,args.number))
 		#M[tagB]={}
 		#r=igf.get_co_p(N,tagB,n=args.number)
 		#for idx in xrange(len(N)):
@@ -77,7 +78,7 @@ def update_matrix(N):
 	else:
 		for tagA in N:
 			if tagA not in M[tagB]:
-				todo.append(([tagA],tagB))
+				todo.append(([tagA],tagB,args.number))
 				#M[tagB][tagA]=igf.get_co_p([tagA],tagB,n=args.number)[0]
     rmap=[]
     for x in tqdm.tqdm(p.imap(update_helper, todo),total=len(todo)):
@@ -92,18 +93,28 @@ def update_matrix(N):
     	    M[tagB][tagAs[j]]=r[j]
 	
 
-def print_m(M,N,col_stats=None):
+def print_m(M,N,normalize=False):
     s=[",".join( ["X"] + N)]
     for i in N: # pick the row
+        #normalize each row
+        norm=1.0
+        if normalize:
+            row=[]
+            for j in N:
+                if j==i:
+                    continue
+                row.append(M[i][j])
+            norm=sum(row)
         row=[]
         for j in N: # for each row
             if j==i:
                 row.append(0)
 		continue
-            if col_stats!=None:
-	        row.append(np.abs(M[i][j]-col_stats[j]['avg'])/col_stats[j]['std'])
             else:
-	        row.append(M[i][j])
+                if norm==0:
+                    row.append(0.0)
+                else:
+	            row.append(M[i][j]/norm)
         s.append(",".join([i]+["%0.3e" % x for x in row]) )	
     return "\n".join(s) 
 
@@ -144,7 +155,18 @@ def prs(M,N):
             print "REMOVED",len(acc)-len(acc_no_outliers),"Outliers from",i
         else:
             print "NOTHING REMOVED?",i
-    return r,col_stats
+    
+    row_stats={}
+    for i in N:
+        row=[]
+        for j in N:
+            if j==i:
+                continue
+            row.append(M[i][j])
+        #update row stats
+        row=np.array(row)
+        row_stats[i]={'avg':row.mean(),'std':row.std(),'sum':row.sum()}
+    return r,col_stats,row_stats
 
 p = Pool(args.pool_size)
 
@@ -153,18 +175,19 @@ M={}
 N=[ args.seed ]
 
 print "Tags before freq filter",len(freqs)
-freqs=list(filter(lambda x: x[0] > (10.0/args.hashtag_number), freqs))
+#freqs=list(filter(lambda x: x[0] > (10.0/args.hashtag_number), freqs))
+freqs=list(filter(lambda x: x[0] > (50.0/args.hashtag_number), freqs))
 print "Tags after freq filter",len(freqs)
 
 def get_only_tag_backs(L,threshold=0.01):
-    todo=[ ([x[1]],args.seed) for x in L ]
+    todo=[ ([args.seed],x[1], args.tag_back_number) for x in L ]
     todones=[]
     for x in tqdm.tqdm(p.imap(update_helper, todo),total=len(todo)):
         todones.append(x)
     #todones=map(update_helper, todo)
     r=[]
     for idx in xrange(len(L)):
-        if todones[idx]>threshold:
+        if todones[idx][0]>threshold:
             r.append(L[idx][1])
     return r
 
@@ -177,6 +200,10 @@ print "Considering",len(N),"tags"
 update_matrix(N)
 matrix=print_m(M,N)
 f=open(args.out_dir+'/full.txt','w')
+f.write(matrix+'\n')
+f.close()
+matrix=print_m(M,N,normalize=True)
+f=open(args.out_dir+'/full_norm.txt','w')
 f.write(matrix+'\n')
 f.close()
 	
