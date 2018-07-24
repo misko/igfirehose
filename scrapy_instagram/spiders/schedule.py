@@ -30,7 +30,7 @@ def get_tag_auto(r,seconds):
                             return tag,rid
                     except redis.exceptions.WatchError:
                         pass
-        print "Failed to get an auto tag! Sleep then try!"
+        print("Failed to get an auto tag! Sleep then try!")
     return None,None
 
 def refresh_auto_tag(r,tag,rid,seconds):
@@ -59,7 +59,7 @@ def rm_auto_tag(r,tag):
 
 if __name__=='__main__':
     if len(sys.argv)!=4:
-        print "% ip port password"
+        print("% ip port password" % sys.argv[0])
         sys.exit(1)
 
     ip=sys.argv[1]
@@ -73,6 +73,6 @@ if __name__=='__main__':
     #get an auto tag
     tag,rid=get_tag_auto(r,600)
     #sleep for a bit
-    print r.ttl("mining_"+tag)
-    print refresh_auto_tag(r,tag,rid,900)
-    print r.ttl("mining_"+tag)
+    print(r.ttl("mining_"+tag))
+    print(refresh_auto_tag(r,tag,rid,900))
+    print(r.ttl("mining_"+tag))

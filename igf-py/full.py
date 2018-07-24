@@ -23,6 +23,7 @@ parser.add_argument("-t", "--threshold", help="t",type=int,default=0.0002)
 parser.add_argument("-p", "--pool-size", help="pool size",type=int,default=16)
 parser.add_argument("-d", "--out-dir", help="out-dir",type=str,default='algo_out')
 parser.add_argument("-g", "--sigma", help="out-dir",type=float,default=3.0)
+parser.add_argument("-mt", "--max-tags", help="max tags",type=int,default=-1)
 args = parser.parse_args()
 import errno    
 import os
@@ -62,7 +63,7 @@ def get_freq():
 def update_helper(a):
     tagAs,tagB,n=a
     igf2 = IGFirehose(args.config)
-    r=igf2.get_co_p(tagAs,tagB,n=n)
+    r=igf2.get_co_p(tagAs,tagB,n=n,max_tags=args.max_tags)
     return r
     
 def update_matrix(N):
@@ -85,7 +86,7 @@ def update_matrix(N):
         rmap.append(x)
     #rmap=p.map(update_helper, todo)
     for i in xrange(len(todo)):
-        tagAs,tagB = todo[i] #input
+        tagAs,tagB,_ = todo[i] #input
         r=rmap[i] #output
         if tagB not in M:
             M[tagB]={}
@@ -199,11 +200,11 @@ for tag in get_only_tag_backs(freqs,threshold=args.tag_back):
 print "Considering",len(N),"tags"
 update_matrix(N)
 matrix=print_m(M,N)
-f=open(args.out_dir+'/full.txt','w')
+f=open(args.out_dir+'/full_mt%d_%s.txt' % (args.max_tags,args.seed),'w')
 f.write(matrix+'\n')
 f.close()
 matrix=print_m(M,N,normalize=True)
-f=open(args.out_dir+'/full_norm.txt','w')
+f=open(args.out_dir+'/full_mt%d_norm_%s.txt' % (args.max_tags,args.seed),'w')
 f.write(matrix+'\n')
 f.close()
 	
