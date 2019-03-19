@@ -10,7 +10,7 @@ import time
 import os.path
 import json
 from scrapy.exceptions import CloseSpider
-#import schedule
+from scrapy_instagram import schedule
 from scrapy_instagram.items import Post
 import zlib
 import redis
