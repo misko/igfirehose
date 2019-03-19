@@ -13,4 +13,4 @@ igf = IGFirehose(args.config)
 tags=list(igf.get_mined_tags())
 tags.sort()
 for tag in tags:
-	print tag
+	print(tag)
