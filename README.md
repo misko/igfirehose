@@ -42,5 +42,5 @@ cd igfirehose
 virtualenv env
 source env/bin/activate
 pip install -r requirements.txt
-scrapy crawl -a config_fn=igf.conf -n 10000000 hashtag
+scrapy crawl -a config_fn=igf-py/igf.conf -a n=10000000 hashtag
 ```
