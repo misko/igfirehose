@@ -4,7 +4,7 @@ import sys
 from IGFirehose import IGFirehose
 
 if len(sys.argv)!=3:
-    print "%s config tag" % sys.argv[0]
+    print("%s config tag" % sys.argv[0])
     sys.exit(1)
 
 config_fn = sys.argv[1]

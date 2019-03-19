@@ -2,15 +2,15 @@
 # encoding=utf8  
 import sys  
 
-reload(sys)  
-sys.setdefaultencoding('utf8')
+#reload(sys)  
+#sys.setdefaultencoding('utf8')
 import scrapy
 import json
 import time
 import os.path
 import json
 from scrapy.exceptions import CloseSpider
-import schedule
+#import schedule
 from scrapy_instagram.items import Post
 import zlib
 import redis
@@ -51,7 +51,7 @@ def trim(edge):
 	if 'version' not in new_edge:
 		new_edge['version']=1
 		thumbs=[]
-		for idx in xrange(len(new_edge['thumbnails'])):
+		for idx in range(len(new_edge['thumbnails'])):
 			thumbs.append(new_edge['thumbnails'][idx]['src'])
 		new_edge['thumbnails']=thumbs
 	edge_list=[None]*len(lookup)
@@ -62,7 +62,7 @@ def trim(edge):
 class InstagramSpider(scrapy.Spider):
 	name = "hashtag"  # Name of the Spider, required value
 	custom_settings = {
-		'FEED_URI': './scraped/%(name)s/%(hashtag)s/%(date)s',
+		'FEED_URI': './scraped/%(name)s/%(hashtag)s/%(time)s',
 	}
 	checkpoint_path = './scraped/%(name)s/%(hashtag)s/.checkpoint'
 	handle_httpstatus_list = [404,429]
@@ -104,7 +104,7 @@ class InstagramSpider(scrapy.Spider):
 				raise CloseSpider('FAIL: Failed to get a hastag to mine')
 		resume=self.r.get("resume_"+self.hashtag)
 		if resume:
-			self.start_urls = [resume]
+			self.start_urls = [resume.decode('utf-8')]
 		else:
 			self.start_urls = ["https://www.instagram.com/explore/tags/"+self.hashtag+"/?__a=1"]
 		self.r.set("resume_"+self.hashtag, self.start_urls[-1])
@@ -153,7 +153,7 @@ class InstagramSpider(scrapy.Spider):
 			else:
 				self.punt+=1
 			trimmed_edge=trim(edge)
-			compressed_edge=zlib.compress(json.dumps(trimmed_edge), 9)
+			compressed_edge=zlib.compress(json.dumps(trimmed_edge).encode('utf-8'), 9)
 			self.r.set(node['shortcode'], compressed_edge)
 			self.r.sadd('shortcodes',node['shortcode'])
 			self.r.sadd('shortcodes_'+self.hashtag,node['shortcode'])
@@ -172,7 +172,7 @@ class InstagramSpider(scrapy.Spider):
 
 		if has_next:
 			end_cursor = graphql['graphql']['hashtag']['edge_hashtag_to_media']['page_info']['end_cursor']
-			self.r.set("resume_"+self.hashtag.decode('utf-8'), "https://www.instagram.com/explore/tags/"+self.hashtag+"/?__a=1&max_id="+end_cursor)
+			self.r.set("resume_"+self.hashtag, "https://www.instagram.com/explore/tags/"+self.hashtag+"/?__a=1&max_id="+end_cursor)
 			#hits_per_hour=200.0
 			#seconds_per_hit=(60.0*60.0)/hits_per_hour
 			#time.sleep(seconds_per_hit)

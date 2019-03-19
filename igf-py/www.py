@@ -15,6 +15,7 @@ def dashboard():
     tags=[]
     total_images = 0
     total_mined = 0
+    total_progress = 0
     for tag in str_tags:
         t={}
         t['name']=tag
@@ -40,8 +41,8 @@ def dashboard():
             t['thumbnail']=url_for('static', filename='imgs/no_imgs.png')
         #tags['thumb']=e[0]['thumbnails'][0]['src']
         tags.append(t)
-        total_progress=(100*float(total_mined)/total_images)
-        total_progress_str="%0.2f" % (total_progress)
+        total_progress=(100*float(total_mined)/(total_images+1))
+    total_progress_str="%0.2f" % (total_progress)
     total_images="{:,}".format(total_images)
     return render_template('dashboard.html',tags=tags,total_images=total_images,total_progress=total_progress_str,total_progress_int=int(total_progress))
 

@@ -1,8 +1,6 @@
 # encoding=utf8  
 import sys
 
-reload(sys)
-sys.setdefaultencoding('utf8')
 import math
 import redis
 import json
@@ -81,7 +79,7 @@ class IGFirehose():
                 password=self.config['redis-password'])
 
     def get_mined_tags(self):
-        return self.r.smembers('tags')
+        return [x.decode('utf-8') for x in  self.r.smembers('tags') ]
 
     def get_is_done(self,tag):
         return self.r.get('done_'+tag)
@@ -174,10 +172,10 @@ class IGFirehose():
     # pr ( tagAs | posts )
     def get_co_p_from_posts(self,tagAs,tagBs,posts):
         if type(tagAs) is not list:
-            print "NEEDS TO BE LIST!"
+            print("NEEDS TO BE LIST!")
             sys.exit(1)
         if type(tagBs) is not list:
-            print "NEEDS TO BE LIST!"
+            print("NEEDS TO BE LIST!")
             sys.exit(1)
             # get n posts from tagB
         r={}
@@ -202,7 +200,7 @@ class IGFirehose():
     # pr ( tagA | tagB )
     def get_co_p(self,tagAs,tagB,n=1000,max_tags=-1):
         if type(tagAs) is not list:
-            print "NEEDS TO BE LIST!"
+            print("NEEDS TO BE LIST!")
             sys.exit(1)
             # get n posts from tagB
         tagB = tagB
