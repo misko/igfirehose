@@ -100,8 +100,7 @@ class InstagramSpider(scrapy.Spider):
 			self.hashtag,self.rid=schedule.get_tag_auto(self.r,60)
 			self.auto_tag=True
 			if self.hashtag==None:
-				print("FAIL: Failed to get a hastag to mine")
-				raise CloseSpider('FAIL: Failed to get a hastag to mine')
+				raise CloseSpider('FAIL: Failed to get a hastag to mine, maybe add a autohashtag with igf-py/add_tag_auto.py or specify a nonempty hashtag to mine on command line')
 		resume=self.r.get("resume_"+self.hashtag)
 		if resume:
 			self.start_urls = [resume.decode('utf-8')]
