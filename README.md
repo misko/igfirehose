@@ -14,8 +14,31 @@ To mine images from instagram there is a server / worker model where the server 
 * Add tags to be auto-mined
 * Start web front end
 
+### Server quick start
+```
+git clone --recurse-submodules https://github.com/misko/igfirehose.git
+cd igfirehose
+virtualenv env
+source env/bin/activate
+pip install -r requirements.txt
+redis-server &
+sleep 1
+redis-cli config set requirepass bobsburgers
+cd igf-py
+python www.py
+```
+
+
 ### Client setup
 
 * Create pip enviornment
 * Run the crawler, scrapy crawl -a config_fn=igf.conf -n 10000000 hashtag
 
+
+### Client quick start
+git clone --recurse-submodules https://github.com/misko/igfirehose.git
+cd igfirehose
+virtualenv env
+source env/bin/activate
+pip install -r requirements.txt
+scrapy crawl -a config_fn=igf.conf -n 10000000 hashtag
