@@ -36,9 +36,11 @@ python www.py
 
 
 ### Client quick start
+```
 git clone --recurse-submodules https://github.com/misko/igfirehose.git
 cd igfirehose
 virtualenv env
 source env/bin/activate
 pip install -r requirements.txt
 scrapy crawl -a config_fn=igf.conf -n 10000000 hashtag
+```
