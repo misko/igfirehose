@@ -8,7 +8,7 @@ def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
 def get_tag_auto(r,seconds):
-    for x in xrange(6):
+    for x in range(6):
         tag=r.srandmember('tags',-1)
         if tag:
             tag=tag[0]
