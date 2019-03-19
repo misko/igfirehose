@@ -13,7 +13,7 @@ parser.add_argument("-c", "--config", help="config file",required=True,type=str)
 args = parser.parse_args()
 
 igf = IGFirehose(args.config)
-imgs=igf.fetch(args.tag,n=args.number,keys=('hashtags'))
+imgs=igf.fetch(args.tag,n=args.number,keys=('hashtags',))
 
 hashtag_counts={}
 norm=0
@@ -21,8 +21,8 @@ for img in imgs:
 	if len(img['hashtags'])>0:
 		norm+=1
 	for hashtag in img['hashtags']:
-    		if hashtag not in hashtag_counts:
-        		hashtag_counts[hashtag]=0
+		if hashtag not in hashtag_counts:
+			hashtag_counts[hashtag]=0
 		hashtag_counts[hashtag]+=1
 
 
@@ -35,4 +35,4 @@ hashtags.sort(reverse=True)
 #print hashtags
 for f,hashtag in hashtags:
     for x in range(int(1000*f)):
-        print hashtag.encode('utf-8').strip()
+        print(hashtag.strip())
