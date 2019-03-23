@@ -32,15 +32,26 @@ python www.py
 ### Client setup
 
 * Create pip enviornment
-* Run the crawler, scrapy crawl -a config_fn=igf.conf -n 10000000 hashtag
+* Run the crawler, 
+scrapy crawl -a config_fn=igf-py/igf.conf -a n=100000 -a hashtag="" hashtag
 
+With hashtag="" you must add tags to mine in igf-py/add_tag_auto.py .  That way it will show up in the served webpage as well.  To see what hashtags have been added to be automatically mined, use igf-py/query_tags.py -c <your_config_file>
 
-### Client quick start
+## Client quick start
 ```
 git clone --recurse-submodules https://github.com/misko/igfirehose.git
 cd igfirehose
 virtualenv env
 source env/bin/activate
 pip install -r requirements.txt
-scrapy crawl -a config_fn=igf-py/igf.conf -a n=10000000 hashtag
+crapy crawl -a config_fn=igf-py/igf.conf -a n=100000 -a hashtag="" hashtag
 ```
+
+To add a word cloud of associated tags, go to scripts and run make_all_word_clouds.sh .  The resulting world cloud can be accessed on the webpage. 
+
+To download images whose url were scrapped. Use: 
+```
+while [ 1 -lt 2 ]; do python3 query_urls.py -t makeup -n 1000 -c igf.conf | while read line; do dest_fn=downloads/`basename $line`; dest_fn=`echo ${dest_fn} | tr "?" " " | awk '{print $1}'`; echo ${dest_fn};  if [ ! -f ${dest_fn} ]; then wget "$line"  -O ${dest_fn} 2> /dev/null; fi; done; sleep 5s; done
+
+```
+Where you created a downloads/ folder to store the downloaded images. 
